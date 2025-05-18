@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RFID Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; max-width: 500px; margin: auto; }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; }
+    .user { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h2>RFID User Registration</h2>
+  <input type="text" id="uid" placeholder="UID (from RFID)">
+  <input type="text" id="name" placeholder="Name">
+  <input type="number" id="points" placeholder="Points">
+  <button onclick="registerUser()">Register / Update</button>
+
+  <h3>All Users:</h3>
+  <div id="userList"></div>
+
+  <script>
+    // ✅ Replace with your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCsZRmgxXUwhUixleFg8YruJ6sC0PiWEGs",
+      authDomain: "points-81a57.firebaseapp.com",
+      databaseURL: "https://points-81a57-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "points-81a57",
+      storageBucket: "points-81a57.firebasestorage.app",
+      messagingSenderId: "254808366126",
+      appId: "1:254808366126:web:6cc55453859478c1a153bf"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function registerUser() {
+      const uid = document.getElementById('uid').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const points = parseInt(document.getElementById('points').value.trim());
+
+      if (!uid || !name || isNaN(points)) {
+        alert("Fill all fields!");
+        return;
+      }
+
+      db.ref("users/" + uid).set({
+        name: name,
+        points: points
+      }).then(() => {
+        db.ref("pending_registration/" + uid).remove();
+        alert("User registered!");
+        loadUsers();
+      });
+    }
+
+    function loadUsers() {
+      db.ref("users").once('value', snapshot => {
+        const container = document.getElementById('userList');
+        container.innerHTML = "";
+        snapshot.forEach(child => {
+          const uid = child.key;
+          const data = child.val();
+          container.innerHTML += `
+            <div class="user">
+              <strong>${data.name}</strong> (UID: ${uid})<br>
+              Points: ${data.points}
+            </div>
+          `;
+        });
+      });
+    }
+
+    function watchPending() {
+      db.ref("pending_registration").on('value', snapshot => {
+        if (snapshot.exists()) {
+          const pending = snapshot.val();
+          const keys = Object.keys(pending);
+          if (keys.length > 0) {
+            document.getElementById('uid').value = keys[0];
+            document.getElementById('name').focus();
+          }
+        }
+      });
+    }
+
+    loadUsers();
+    watchPending();
+  </script>
+</body>
+</html>
